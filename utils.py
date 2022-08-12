@@ -16,8 +16,46 @@ def readImage(imageName):
     return image
 
 
-def prostate_segmenter(image):
-    pass
+def preSegmentationFilter(image, medianKernel, lowThresh, highThresh, cannyVar, cannyLow, cannyHigh):
+
+    #employ median filter
+    median_filter = sitk.MedianImageFilter()
+    median_filter.SetRadius(medianKernel)
+    img_denoised = median_filter.Execute(image)
+
+    #threshold intensities to get rid of unwanted ones
+    size = img_denoised.GetSize()
+    img_denoised_array = sitk.GetArrayFromImage(img_denoised)
+    img_low_thresh_array = np.zeros((size[2], size[1], size[0]))
+    img_low_thresh_array = np.where(img_denoised_array < lowThresh, img_low_thresh_array, img_denoised_array)
+    img_high_thresh_array = np.zeros((size[2], size[1], size[0]))
+    img_thresh_array = np.where(img_low_thresh_array > highThresh, img_high_thresh_array, img_low_thresh_array)
+    img_thresh = sitk.GetImageFromArray(img_thresh_array)
+
+    #canny filtering
+    canny_filter = sitk.CannyEdgeDetectionImageFilter()
+    canny_filter.SetVariance(cannyVar)
+    canny_filter.SetLowerThreshold(cannyLow)
+    canny_filter.SetUpperThreshold(cannyHigh)
+    img_canny = canny_filter.Execute(img_thresh)
+
+    #add canny outlines to thresholded image
+    canny_array = sitk.GetArrayFromImage(img_canny)
+    new_array = np.where(canny_array == 1, canny_array, img_thresh_array)
+    new_image = sitk.GetImageFromArray(new_array)
+    new_image_cast = sitk.Cast(new_image, sitk.sitkUInt8)
+
+    return(new_image_cast)
+
+
+def prostate_segmenter(image,fiducial1,fiducial2,fiducial3,fiducial4,lowerBound,upperBound):
+
+    #segment prostate
+    SeedList = [fiducial1,fiducial2,fiducial3,fiducial4]
+    segmented = sitk.ConnectedThreshold(image, seedList=SeedList, lower=lowerBound, upper=upperBound)
+
+    return segmented
+
 
 def seg_eval_dice(seg1, seg2):
 
@@ -34,10 +72,10 @@ def seg_eval_dice(seg1, seg2):
     print(DSC)
 
 
-def get_target_loc(image):
+def get_target_loc(segment,image):
 
     # Determine slice in LP plane with largest area (use # white pixels as proxy for largest area)
-    segment_array = sitk.GetArrayFromImage(image)
+    segment_array = sitk.GetArrayFromImage(segment)
 
     list_of_pixel_nums = []
 
@@ -49,10 +87,10 @@ def get_target_loc(image):
 
     #Find centroid of the segment
     label_shape_filter = sitk.LabelShapeStatisticsImageFilter()
-    label_shape_filter.Execute(image[:, :, max_index] == 1)
+    label_shape_filter.Execute(segment[:, :, max_index] == 1)
     centroid = label_shape_filter.GetCentroid(1)
 
-    dummy_S_coord = image.TransformIndexToPhysicalPoint((0, 0, max_index))
+    dummy_S_coord = segment.TransformIndexToPhysicalPoint((0, 0, max_index))
     coordinates = [centroid[0], centroid[1], dummy_S_coord[2]]
 
     print("The centroid of the prostate in slice {} of the LP plane is: {}, {}, {}.".format(max_index,
@@ -62,13 +100,13 @@ def get_target_loc(image):
                                                                                                      2)))
 
     # Plot the biopsy point
-    x_coord = (coordinates[0] - image.GetOrigin()[0]) / image.GetSpacing()[0]
-    y_coord = (coordinates[1] - image.GetOrigin()[1]) / image.GetSpacing()[1]
+    x_coord = (coordinates[0] - segment.GetOrigin()[0]) / segment.GetSpacing()[0]
+    y_coord = (coordinates[1] - segment.GetOrigin()[1]) / segment.GetSpacing()[1]
 
     plt.figure(figsize=(20, 20))
     plt.gray()
     plt.imshow(sitk.GetArrayFromImage(image[:, :, max_index]))
-    plt.scatter(x_coord, y_coord, c='red', marker='x', s=300)
+    plt.scatter(x_coord, y_coord, c='red', marker='x', s=400)
     plt.axis('off')
     plt.title('Biopsy Point', fontsize=40)
     plt.show()
@@ -84,19 +122,19 @@ def pixel_extract(img,point,width):
     z_coord = (point[2] - img.GetOrigin()[2]) / img.GetSpacing()[2]
 
     #Find start and end coordinates for each dimension of the cube
-    start_0 = int(x_coord - (0.5 * width))
-    end_0 = int(x_coord + (0.5 * width))
-    start_1 = int(y_coord - (0.5 * width))
-    end_1 = int(y_coord + (0.5 * width))
-    start_2 = int(z_coord - (0.5 * width))
-    end_2 = int(z_coord + (0.5 * width))
+    start_0 = round(x_coord - (0.5 * width))
+    end_0 = round(x_coord + (0.5 * width))
+    start_1 = round(y_coord - (0.5 * width))
+    end_1 = round(y_coord + (0.5 * width))
+    start_2 = round(z_coord - (0.5 * width))
+    end_2 = round(z_coord + (0.5 * width))
 
     #Pull pixel intensities from cubic segment
     pixel_intensities = img[start_0:end_0, start_1:end_1, start_2:end_2]
 
     #Plot pixel intensities from cubic segment
     c = "green"
-    xlab_LPS = str(int(point[0])) + "," + str(int(point[1])) + "," + str(int(point[2]))
+    xlab_LPS = str(round(point[0])) + "," + str(round(point[1])) + "," + str(round(point[2]))
     fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(111)
     plt.boxplot(pixel_intensities, notch=False, patch_artist=True, boxprops=dict(facecolor="palegreen", color=c),
