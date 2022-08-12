@@ -2,7 +2,6 @@ import os
 import SimpleITK as sitk
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 
 os.chdir("C:\\Users\\User\\Documents\\Biomedical_Informatics\\BMIF804\\Mini_Project")
 
@@ -12,11 +11,23 @@ def readImage(imageName):
     :param imageName: name of the file to read in
     :return: image object
     """
+
     image = sitk.ReadImage(imageName)
     return image
 
 
 def preSegmentationFilter(image, medianKernel, lowThresh, highThresh, cannyVar, cannyLow, cannyHigh):
+    """
+    Filter a prostate image with median filtering, thresholing, and canny edge detection to prepare for segmentation
+    :param image: image object
+    :param medianKernel: kernel value for median filtering
+    :param lowThresh: lower pixel intensity value for thresholding
+    :param highThresh: upper pixel intensity value for thresholding
+    :param cannyVar: variance value for canny edge detection
+    :param cannyLow: lower threshold value for canny edge detection
+    :param cannyHigh: upper threshold value for canny edge detection
+    :return: a filtered image object
+    """
 
     #employ median filter
     median_filter = sitk.MedianImageFilter()
@@ -49,6 +60,17 @@ def preSegmentationFilter(image, medianKernel, lowThresh, highThresh, cannyVar, 
 
 
 def prostate_segmenter(image,fiducial1,fiducial2,fiducial3,fiducial4,lowerBound,upperBound):
+    """
+    Segmentation algorithm using SimpleITK's ConnectedThreshold function
+    :param image: image object
+    :param fiducial1: first seed point
+    :param fiducial2: second seed point
+    :param fiducial3: third seed point
+    :param fiducial4: fourth seed point
+    :param lowerBound: lower pixel intensity value for thresholding
+    :param upperBound: upper pixel intensity value for thresholding
+    :return: an image object of the segmentation
+    """
 
     #segment prostate
     SeedList = [fiducial1,fiducial2,fiducial3,fiducial4]
@@ -61,6 +83,13 @@ def prostate_segmenter(image,fiducial1,fiducial2,fiducial3,fiducial4,lowerBound,
 
 
 def viewSegmentOverlay(image,segment,slice_no):
+    """
+    Plot a segmentation mask over an image
+    :param image: image object
+    :param segment: segmentation object
+    :param slice_no: slice number in the LP plane in which to visualize the segmentation
+    :return: plot of segment overlayed on image
+    """
 
     segment = sitk.Cast(segment, sitk.sitkUInt8)
     image = sitk.Cast(image, sitk.sitkUInt8)
@@ -81,6 +110,12 @@ def viewSegmentOverlay(image,segment,slice_no):
 
 
 def seg_eval_dice(seg1, seg2):
+    """
+    Calculate Dice Similarity Coefficient between two segments
+    :param seg1: first segment object
+    :param seg2: second segment object
+    :return: the Dice Similarity Coefficient score
+    """
 
     #Make sure two segments have the same pixel type --> UInt8
     seg1 = sitk.Cast(seg1, sitk.sitkUInt8)
@@ -99,6 +134,12 @@ def seg_eval_dice(seg1, seg2):
 
 
 def get_target_loc(segment,image):
+    """
+    Identify target coordinates for a prostate biopsy location
+    :param segment: segmented prostate image object
+    :param image: image object
+    :return: LPS coordinates of the target biopsy location
+    """
 
     # Determine slice in LP plane with largest area (use # white pixels as proxy for largest area)
     segment_array = sitk.GetArrayFromImage(segment)
@@ -141,6 +182,13 @@ def get_target_loc(segment,image):
 
 
 def pixel_extract(img,point,width):
+    """
+    Boxplot of pixel identities from a cubic region around a designated biopsy location in an image
+    :param img: image object
+    :param point: tuple of LPS coordinates for biopsy location
+    :param width: width of cubic region (in mm) from which to extract pixel intensities
+    :return: boxplot displaying pixel intensities from cubic region around designated point
+    """
 
     #Get biopsy coordinates in physical space
     x_coord = (point[0] - img.GetOrigin()[0]) / img.GetSpacing()[0]
