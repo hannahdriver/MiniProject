@@ -68,13 +68,44 @@ def get_target_loc(image):
     plt.figure(figsize=(20, 20))
     plt.gray()
     plt.imshow(sitk.GetArrayFromImage(image[:, :, max_index]))
-    plt.scatter(x_coord, y_coord, c='red', marker='x', s=200)
+    plt.scatter(x_coord, y_coord, c='red', marker='x', s=300)
     plt.axis('off')
-    plt.title('Biopsy Point')
+    plt.title('Biopsy Point', fontsize=40)
     plt.show()
 
-
-def pixel_extract():
-    pass
+    return(coordinates)
 
 
+def pixel_extract(img,point,width):
+
+    #Get biopsy coordinates in physical space
+    x_coord = (point[0] - img.GetOrigin()[0]) / img.GetSpacing()[0]
+    y_coord = (point[1] - img.GetOrigin()[1]) / img.GetSpacing()[1]
+    z_coord = (point[2] - img.GetOrigin()[2]) / img.GetSpacing()[2]
+
+    #Find start and end coordinates for each dimension of the cube
+    start_0 = int(x_coord - (0.5 * width))
+    end_0 = int(x_coord + (0.5 * width))
+    start_1 = int(y_coord - (0.5 * width))
+    end_1 = int(y_coord + (0.5 * width))
+    start_2 = int(z_coord - (0.5 * width))
+    end_2 = int(z_coord + (0.5 * width))
+
+    #Pull pixel intensities from cubic segment
+    pixel_intensities = img[start_0:end_0, start_1:end_1, start_2:end_2]
+
+    #Plot pixel intensities from cubic segment
+    c = "green"
+    xlab_LPS = str(int(point[0])) + "," + str(int(point[1])) + "," + str(int(point[2]))
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111)
+    plt.boxplot(pixel_intensities, notch=False, patch_artist=True, boxprops=dict(facecolor="palegreen", color=c),
+                whiskerprops=dict(color=c), flierprops=dict(color=c, markeredgecolor=c), capprops=dict(color=c),
+                medianprops=dict(color=c))
+    labels = [item.get_text() for item in ax.get_xticklabels()]
+    labels[0] = xlab_LPS
+    ax.set_xticklabels(labels)
+    plt.title('Pixel Intensities Around Biopsy Point', fontsize=16)
+    plt.xlabel("Biopsy Coordinates (LPS)", fontsize=14)
+    plt.ylabel("Pixel Intensity", fontsize=14)
+    plt.show()
