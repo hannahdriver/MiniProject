@@ -12,7 +12,6 @@ def main():
     img = readImage("case23_resampled.nii")
     segment = readImage("case23_resampled_segmentation.nii")
     img32 = sitk.Cast(img, sitk.sitkFloat32)
-    #segment32 = sitk.Cast(segment, sitk.sitkFloat32)
 
     ###Part A
     #Filter image
@@ -27,8 +26,9 @@ def main():
     #Segment
     segmented_prostate = prostate_segmenter(filtered_img, fid1, fid2, fid3, fid4, 50, 115)
 
-    #View overlayed segments (gold standard and newly generated segment)
-
+    #View overlayed segments (newly generated segment and gold standard)
+    viewSegmentOverlay(img,segmented_prostate,35)
+    viewSegmentOverlay(img,segment,35)
 
     ###Part B
     seg_eval_dice(segment,segmented_prostate)

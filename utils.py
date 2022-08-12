@@ -54,10 +54,36 @@ def prostate_segmenter(image,fiducial1,fiducial2,fiducial3,fiducial4,lowerBound,
     SeedList = [fiducial1,fiducial2,fiducial3,fiducial4]
     segmented = sitk.ConnectedThreshold(image, seedList=SeedList, lower=lowerBound, upper=upperBound)
 
+    #write out segment as an nrrd image
+    sitk.WriteImage(segmented, "my_segmentation.nrrd")
+
     return segmented
 
 
+def viewSegmentOverlay(image,segment,slice_no):
+
+    segment = sitk.Cast(segment, sitk.sitkUInt8)
+    image = sitk.Cast(image, sitk.sitkUInt8)
+
+    #Make sure metadata is the same between the image and segment
+    standard_spacing = image.GetSpacing()
+    standard_origin = image.GetOrigin()
+    segment.SetOrigin(standard_origin)
+    segment.SetSpacing(standard_spacing)
+
+    #employ overlay
+    img_overlay = sitk.LabelOverlay(image, segment)
+
+    #View overlay
+    plt.figure(figsize=(10, 10))
+    plt.imshow(sitk.GetArrayFromImage(img_overlay[:, :, slice_no]))
+    plt.axis('off')
+
+
 def seg_eval_dice(seg1, seg2):
+
+    #Make sure two segments have the same pixel type --> UInt8
+    seg1 = sitk.Cast(seg1, sitk.sitkUInt8)
 
     #Make sure origin and spacing are the same for each segment
     standard_origin = seg1.GetOrigin()
@@ -69,7 +95,7 @@ def seg_eval_dice(seg1, seg2):
     measures = sitk.LabelOverlapMeasuresImageFilter()
     measures.Execute(seg1, seg2)
     DSC = measures.GetDiceCoefficient()
-    print(DSC)
+    print("The Dice Similarity Coefficient for the two segments is: {}.".format(DSC))
 
 
 def get_target_loc(segment,image):
@@ -93,7 +119,7 @@ def get_target_loc(segment,image):
     dummy_S_coord = segment.TransformIndexToPhysicalPoint((0, 0, max_index))
     coordinates = [centroid[0], centroid[1], dummy_S_coord[2]]
 
-    print("The centroid of the prostate in slice {} of the LP plane is: {}, {}, {}.".format(max_index,
+    print("The biopsy coordinates (at the centroid of the prostate) in slice {} of the LP plane are: {}, {}, {}.".format(max_index,
                                                                                             np.round(coordinates[0], 2),
                                                                                             np.round(coordinates[1], 2),
                                                                                             np.round(coordinates[2],
