@@ -19,8 +19,20 @@ def readImage(imageName):
 def prostate_segmenter(image):
     pass
 
-def seg_eval_dice():
-    pass
+def seg_eval_dice(seg1, seg2):
+
+    #Make sure origin and spacing are the same for each segment
+    standard_origin = seg1.GetOrigin()
+    standard_spacing = seg1.GetSpacing()
+    seg2.SetOrigin(standard_origin)
+    seg2.SetSpacing(standard_spacing)
+
+    #Calculate dice similarity coefficient between segments
+    measures = sitk.LabelOverlapMeasuresImageFilter()
+    measures.Execute(seg1, seg2)
+    DSC = measures.GetDiceCoefficient()
+    print(DSC)
+
 
 def get_target_loc(image):
 
