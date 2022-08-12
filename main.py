@@ -31,6 +31,7 @@ def main():
     viewSegmentOverlay(img,segment,35)
 
     ###Part B
+    #
     seg_eval_dice(segment,segmented_prostate)
 
     ###Part C
