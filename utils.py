@@ -130,7 +130,8 @@ def seg_eval_dice(seg1, seg2):
     measures = sitk.LabelOverlapMeasuresImageFilter()
     measures.Execute(seg1, seg2)
     DSC = measures.GetDiceCoefficient()
-    print("The Dice Similarity Coefficient for the two segments is: {}.".format(DSC))
+    DSC_round = round(DSC,2)
+    print("The Dice Similarity Coefficient for the two segments is: {}.".format(DSC_round))
 
 
 def get_target_loc(segment,image):
@@ -158,7 +159,7 @@ def get_target_loc(segment,image):
     centroid = label_shape_filter.GetCentroid(1)
 
     dummy_S_coord = segment.TransformIndexToPhysicalPoint((0, 0, max_index))
-    coordinates = [centroid[0], centroid[1], dummy_S_coord[2]]
+    coordinates = (centroid[0], centroid[1], dummy_S_coord[2])
 
     print("The biopsy coordinates (at the centroid of the prostate) in slice {} of the LP plane are: {}, {}, {}.".format(max_index,
                                                                                             np.round(coordinates[0], 2),

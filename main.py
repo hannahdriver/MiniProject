@@ -18,7 +18,7 @@ def main():
 
     ###Part A
     #Filter image
-    filtered_img = preSegmentationFilter(img32, 11, 250, 445, 3, 12, 8)
+    filtered_img = preSegmentationFilter(img32, 20, 295, 575, 80, 14, 9)
 
     #Set seeds for segmenting
     fid1 = (181, 116, 32)
@@ -27,7 +27,7 @@ def main():
     fid4 = (231, 186, 32)
 
     #Segment
-    segmented_prostate = prostate_segmenter(filtered_img, fid1, fid2, fid3, fid4, 50, 115)
+    segmented_prostate = prostate_segmenter(filtered_img, fid1, fid2, fid3, fid4, 55, 105)
 
     #View overlayed segments (newly generated segment and gold standard)
     viewSegmentOverlay(img,segmented_prostate,35)
